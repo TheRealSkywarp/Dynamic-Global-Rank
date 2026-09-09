@@ -1,5 +1,4 @@
 #pragma once
-
 #include <Geode/Geode.hpp>
 
 using namespace geode::prelude;
@@ -10,6 +9,7 @@ public:
 
     void load();
     void requestRankUpdate();
+    void requestLeaderboardOnly();
     void updateRankFromScore(GJUserScore* score);
 
     void markLevelCompleted();
@@ -23,6 +23,8 @@ private:
 
     bool m_pendingLevelComplete = false;
     bool m_skipBackgroundRefresh = false;
+    int m_completionRetryCount = 0;
 
     void updateRank(int newRank);
+    void clearCompletionState();
 };

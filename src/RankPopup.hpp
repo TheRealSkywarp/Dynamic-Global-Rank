@@ -1,7 +1,5 @@
 #pragma once
-
 #include <Geode/Geode.hpp>
-
 
 class RankPopup : public cocos2d::CCNode {
 public:
@@ -20,8 +18,9 @@ public:
 private:
     bool init() override;
     bool canShow();
-    bool m_animating = false;
+    void queueRankChange(int oldRank, int newRank);
 
+    bool m_animating = false;
     int m_displayedRank = -1;
     int m_oldRank = 0;
     int m_targetRank = 0;
@@ -33,8 +32,8 @@ private:
     int m_pendingNewRank = -1;
 
     cocos2d::CCLabelBMFont* m_rankLabels[5] = {};
-    cocos2d::CCLabelBMFont* m_title;
-    cocos2d::CCLabelBMFont* m_change;
+    cocos2d::CCLabelBMFont* m_title = nullptr;
+    cocos2d::CCLabelBMFont* m_change = nullptr;
 
-    cocos2d::extension::CCScale9Sprite* m_background;
+    cocos2d::extension::CCScale9Sprite* m_background = nullptr;
 };

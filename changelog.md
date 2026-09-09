@@ -1,3 +1,13 @@
+## v1.0.5
+
+- Fixed background refresh getting stuck after completing a level
+- Fixed rank updates sometimes being missed or only showing a stale +1/+2 change after completing a level
+- Added a delayed retry when post-completion leaderboard data appears to be cached
+- Fixed rank changes being dropped while another rank popup is already animating
+- Fixed interrupted rank popups being lost when entering a level
+- Improved handling of multiple queued rank updates
+- Prevented invalid rank values below #1 from appearing during the popup animation
+
 ## v1.0.4
 - Zoomed logo in a bit more (last logo update)
 - Added formatting to mod description
