@@ -7,8 +7,7 @@
 using namespace geode::prelude;
 
 namespace {
-    constexpr float COMPLETION_FETCH_DELAY = 2.5f;
-    constexpr float COMPLETION_RETRY_DELAY = 2.5f;
+    constexpr float COMPLETION_RETRY_DELAY = 1.25f;
     constexpr int SUSPICIOUS_SMALL_DELTA = 2;
     constexpr int MAX_SMALL_DELTA_RETRIES = 1;
 }
@@ -138,8 +137,8 @@ void RankManager::onLevelInfoOpened() {
         return;
     }
 
-    log::info("Uploading score before delayed completion rank refresh");
-    
+    log::info("Uploading score and requesting completion rank refresh");
+
     GameLevelManager::sharedState()->updateUserScore();
-    RankRefreshScheduler::get()->queueLeaderboardFetch(COMPLETION_FETCH_DELAY);
+    RankRefreshScheduler::get()->queueLeaderboardFetch(0.f);
 }
