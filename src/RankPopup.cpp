@@ -106,6 +106,9 @@ void RankPopup::queueRankChange(int oldRank, int newRank) {
     if (oldRank <= 0 || newRank <= 0 || oldRank == newRank)
         return;
 
+    // Preserve the first rank the user has not yet been shown, but always
+    // update the destination to the newest rank. This turns multiple hidden
+    // updates into one accurate total movement instead of overwriting them.
     if (m_pendingOldRank == -1)
         m_pendingOldRank = oldRank;
 
@@ -123,6 +126,10 @@ void RankPopup::update(float dt) {
             stopAllActions();
             unschedule(schedule_selector(RankPopup::scrollStep));
 
+            // The original implementation simply discarded an animation if
+            // the player entered a level. Requeue it, and if another update
+            // was already waiting, merge from the earliest old rank to the
+            // latest target rank.
             if (m_pendingOldRank == -1) {
                 m_pendingOldRank = m_oldRank;
                 m_pendingNewRank = m_targetRank;
@@ -184,6 +191,8 @@ void RankPopup::showRankChange(int oldRank, int newRank) {
     if (oldRank <= 0 || newRank <= 0 || oldRank == newRank)
         return;
 
+    // Never drop an update. The old code returned immediately while another
+    // popup was animating, which explains intermittent missing popups.
     if (!canShow() || m_animating) {
         queueRankChange(oldRank, newRank);
         return;

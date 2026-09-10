@@ -7,6 +7,7 @@ public:
     static RankRefreshScheduler* get();
     void setInterval(float interval);
     void queueLeaderboardFetch(float delay);
+    void cancelQueuedLeaderboardFetch();
 
 private:
     bool init() override;

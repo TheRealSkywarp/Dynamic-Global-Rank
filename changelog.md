@@ -1,12 +1,12 @@
 ## v1.0.5
 
-- Fixed background refresh getting stuck after completing a level
-- Fixed rank updates sometimes being missed or only showing a stale +1/+2 change after completing a level
-- Added a delayed retry when post-completion leaderboard data appears to be cached
-- Fixed rank changes being dropped while another rank popup is already animating
-- Fixed interrupted rank popups being lost when entering a level
-- Improved handling of multiple queued rank updates
-- Prevented invalid rank values below #1 from appearing during the popup animation
+- Fixed post-completion rank popups using stale leaderboard data and showing incorrect small drops/gains such as -3, +1, or +2
+- Rank freshness is now verified against the player's server-reported star count after completing a rated level
+- Added automatic progressive retries when the leaderboard has not yet caught up or the player's score is missing from the response
+- Added a silent rank baseline refresh on the main menu so the first rated completion after launch can display a rank change reliably
+- Fixed stale/out-of-order leaderboard responses being able to overwrite newer rank data
+- Fixed queued rank popups being lost or overwritten while another popup is animating or gameplay is active
+- Fixed background rank refresh getting stuck after a level completion
 
 ## v1.0.4
 - Zoomed logo in a bit more (last logo update)

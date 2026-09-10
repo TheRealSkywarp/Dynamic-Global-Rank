@@ -23,15 +23,23 @@ class $modify(MyGameLevelManager, GameLevelManager) {
         auto accountID = GJAccountManager::sharedState()->m_accountID;
         auto scores = typeinfo_cast<CCArray*>(glm->m_storedLevels->objectForKey(tag.c_str()));
 
-        if (!scores)
+        if (!scores) {
+            RankManager::get().onLeaderboardResultMissing();
             return;
+        }
+
+        bool foundSelf = false;
 
         for (auto score : CCArrayExt<GJUserScore*>(scores)) {
             if (score->m_accountID == accountID) {
+                foundSelf = true;
                 RankManager::get().updateRankFromScore(score);
                 break;
             }
         }
+
+        if (!foundSelf)
+            RankManager::get().onLeaderboardResultMissing();
     }
 };
 
@@ -45,7 +53,7 @@ class $modify(MyPlayLayer, PlayLayer) {
         int newStars = gsm->getStat("6");
         if (newStars > oldStars) {
             log::info("Earned {} stars", newStars - oldStars);
-            RankManager::get().markLevelCompleted();
+            RankManager::get().markLevelCompleted(oldStars, newStars);
         }
     }
 };
@@ -56,6 +64,19 @@ class $modify(MyLevelInfoLayer, LevelInfoLayer) {
             return false;
 
         RankManager::get().onLevelInfoOpened();
+        return true;
+    }
+};
+
+class $modify(MyMenuLayer, MenuLayer) {
+    bool init() {
+        if (!MenuLayer::init())
+            return false;
+
+        // Obtain a silent, fresh baseline as soon as the main menu is available.
+        // This fixes the first rated completion after launch having no old rank
+        // to compare against (especially after changing the mod ID / fresh install).
+        RankManager::get().requestInitialRank();
         return true;
     }
 };
