@@ -19,6 +19,7 @@ public:
     void onLevelInfoOpened();
 
     bool shouldSkipBackgroundRefresh() const;
+    bool hasPendingLevelComplete() const;
     int getCurrentRank() const;
 
 private:

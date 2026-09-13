@@ -32,6 +32,10 @@ bool RankManager::shouldSkipBackgroundRefresh() const {
     return m_skipBackgroundRefresh;
 }
 
+bool RankManager::hasPendingLevelComplete() const {
+    return m_pendingLevelComplete;
+}
+
 int RankManager::getCurrentRank() const {
     return m_currentRank;
 }
@@ -39,8 +43,6 @@ int RankManager::getCurrentRank() const {
 void RankManager::load() {
     m_currentRank = Mod::get()->getSavedValue<int>("last-rank", -1);
 
-    // This value intentionally starts fresh each game session. It is only used
-    // to reject an older network response that arrives after a newer one.
     m_lastAcceptedServerStars = -1;
 
     log::info("Loaded saved rank: {}", m_currentRank);
@@ -60,16 +62,12 @@ void RankManager::requestLeaderboardOnly() {
         static_cast<int>(LeaderboardStat::Stars)
     );
 
-    // Never trust GD's cached global-stars leaderboard for an explicit refresh.
     glm->m_storedLevels->removeObjectForKey(key.c_str());
     glm->getLeaderboardScores(LeaderboardType::Global, LeaderboardStat::Stars);
 
     if (m_pendingLevelComplete) {
-        // A queued completion fetch has now actually been dispatched.
         m_completionRetryScheduled = false;
 
-        // The regular scheduler is minutes apart, so once the first request is
-        // on the wire there is no reason to keep it blocked indefinitely.
         m_skipBackgroundRefresh = false;
     }
 }
@@ -90,8 +88,6 @@ void RankManager::requestInitialRank() {
 
     log::info("Requesting silent initial rank baseline");
 
-    // Refresh the uploaded score first, then read the leaderboard shortly
-    // afterwards. This gives us a current baseline before the first rated level.
     GameLevelManager::sharedState()->updateUserScore();
     RankRefreshScheduler::get()->queueLeaderboardFetch(0.25f);
 }
@@ -131,8 +127,6 @@ void RankManager::updateRank(int newRank, bool suppressPopup) {
 }
 
 void RankManager::clearCompletionState() {
-    // If a manual leaderboard open resolved the completion before our queued
-    // retry fired, do not leave an unnecessary extra request behind.
     RankRefreshScheduler::get()->cancelQueuedLeaderboardFetch();
 
     m_pendingLevelComplete = false;
@@ -152,8 +146,6 @@ void RankManager::scheduleCompletionRetry(char const* reason) {
         return;
 
     if (m_completionRetryCount >= COMPLETION_RETRY_COUNT) {
-        // Keep the completion pending so a later manual/background leaderboard
-        // response can still finish it, but stop hammering the server.
         m_skipBackgroundRefresh = false;
         log::warn(
             "Completion rank is still not fresh after {} retries ({}). Waiting for the next leaderboard refresh.",
@@ -210,8 +202,6 @@ void RankManager::updateRankFromScore(GJUserScore* score) {
         return;
     }
 
-    // Reject an older response that arrives after a newer response in the same
-    // game session. This prevents a late request from creating a bogus rank drop.
     if (m_lastAcceptedServerStars >= 0 && serverStars < m_lastAcceptedServerStars) {
         log::warn(
             "Ignoring out-of-order leaderboard response: {} server stars < {} already accepted",
@@ -225,13 +215,7 @@ void RankManager::updateRankFromScore(GJUserScore* score) {
     }
 
     if (m_pendingLevelComplete) {
-        // This is the important freshness check: do not infer freshness from a
-        // tiny rank delta. The server must actually know about the stars earned
-        // by the completed rated level before its rank is allowed to be shown.
         if (m_expectedStars > 0 && serverStars < m_expectedStars) {
-            // If there was no baseline yet, a response containing exactly the
-            // pre-completion star total is useful as the old rank. Seed it
-            // silently, then keep waiting for the fresh post-completion result.
             if (
                 m_preCompletionStars >= 0 &&
                 serverStars == m_preCompletionStars &&
@@ -257,8 +241,6 @@ void RankManager::updateRankFromScore(GJUserScore* score) {
             return;
         }
 
-        // The server now reflects the completed level. This rank is eligible
-        // for display regardless of whether the delta is +150, -3, +1, etc.
         m_lastAcceptedServerStars = std::max(m_lastAcceptedServerStars, serverStars);
         m_initialRankRequestPending = false;
 
@@ -267,9 +249,6 @@ void RankManager::updateRankFromScore(GJUserScore* score) {
         return;
     }
 
-    // A normal response can also be stale relative to the user's current local
-    // star total. Ignore it instead of letting a delayed response move the rank
-    // backwards; the next normal refresh will reconcile it once the server does.
     int localStars = GameStatsManager::sharedState()->getStat("6");
     if (localStars > 0 && serverStars < localStars) {
         log::info(
@@ -286,8 +265,6 @@ void RankManager::updateRankFromScore(GJUserScore* score) {
     m_lastAcceptedServerStars = std::max(m_lastAcceptedServerStars, serverStars);
 
     if (m_initialRankRequestPending) {
-        // Startup fetch is only a baseline. Do not throw a popup merely because
-        // the user's rank drifted while the game was closed.
         setRankSilently(newRank);
         m_initialRankRequestPending = false;
         RankRefreshScheduler::get()->cancelQueuedLeaderboardFetch();
@@ -342,7 +319,5 @@ void RankManager::onLevelInfoOpened() {
 
     GameLevelManager::sharedState()->updateUserScore();
 
-    // First read immediately. If Boomlings still reports fewer stars than the
-    // local post-completion total, retries use a short progressive backoff.
     RankRefreshScheduler::get()->queueLeaderboardFetch(0.f);
 }

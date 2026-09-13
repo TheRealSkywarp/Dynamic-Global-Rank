@@ -1,4 +1,5 @@
 #include "RankPopup.hpp"
+#include "RankManager.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -106,9 +107,6 @@ void RankPopup::queueRankChange(int oldRank, int newRank) {
     if (oldRank <= 0 || newRank <= 0 || oldRank == newRank)
         return;
 
-    // Preserve the first rank the user has not yet been shown, but always
-    // update the destination to the newest rank. This turns multiple hidden
-    // updates into one accurate total movement instead of overwriting them.
     if (m_pendingOldRank == -1)
         m_pendingOldRank = oldRank;
 
@@ -126,16 +124,20 @@ void RankPopup::update(float dt) {
             stopAllActions();
             unschedule(schedule_selector(RankPopup::scrollStep));
 
-            // The original implementation simply discarded an animation if
-            // the player entered a level. Requeue it, and if another update
-            // was already waiting, merge from the earliest old rank to the
-            // latest target rank.
-            if (m_pendingOldRank == -1) {
-                m_pendingOldRank = m_oldRank;
-                m_pendingNewRank = m_targetRank;
-            }
-            else {
-                m_pendingOldRank = m_oldRank;
+            int lastShownRank = m_displayedRank > 0 ? m_displayedRank : m_oldRank;
+            int latestTargetRank =
+                m_pendingNewRank > 0 ? m_pendingNewRank : m_targetRank;
+
+            m_pendingOldRank = -1;
+            m_pendingNewRank = -1;
+
+            if (
+                lastShownRank > 0 &&
+                latestTargetRank > 0 &&
+                lastShownRank != latestTargetRank
+            ) {
+                m_pendingOldRank = lastShownRank;
+                m_pendingNewRank = latestTargetRank;
             }
 
             m_animating = false;
@@ -145,7 +147,11 @@ void RankPopup::update(float dt) {
         return;
     }
 
-    if (!m_animating && m_pendingOldRank != -1) {
+    if (
+        !m_animating &&
+        m_pendingOldRank != -1 &&
+        !RankManager::get().hasPendingLevelComplete()
+    ) {
         int oldRank = m_pendingOldRank;
         int newRank = m_pendingNewRank;
 
@@ -191,9 +197,7 @@ void RankPopup::showRankChange(int oldRank, int newRank) {
     if (oldRank <= 0 || newRank <= 0 || oldRank == newRank)
         return;
 
-    // Never drop an update. The old code returned immediately while another
-    // popup was animating, which explains intermittent missing popups.
-    if (!canShow() || m_animating) {
+    if (!canShow() || m_animating || m_pendingOldRank != -1) {
         queueRankChange(oldRank, newRank);
         return;
     }
