@@ -39,8 +39,6 @@ void RankRefreshScheduler::setInterval(float interval) {
 void RankRefreshScheduler::queueLeaderboardFetch(float delay) {
     delay = std::max(0.f, delay);
 
-    // Keep the earliest already queued fetch instead of pushing it farther
-    // away if two callers happen to request one at nearly the same time.
     if (!m_oneShotPending || delay < m_oneShotTimer)
         m_oneShotTimer = delay;
 
@@ -63,8 +61,6 @@ void RankRefreshScheduler::update(float dt) {
             log::info("Running delayed leaderboard fetch");
             RankManager::get().requestLeaderboardOnly();
 
-            // Avoid an immediate second request if the regular timer happened
-            // to be near its interval at the same moment.
             m_timer = 0.f;
             return;
         }
@@ -79,8 +75,6 @@ void RankRefreshScheduler::update(float dt) {
         return;
     }
 
-    // Do not throw this refresh opportunity away. Keep the timer ready so the
-    // refresh happens as soon as the short completion flow releases the flag.
     if (RankManager::get().shouldSkipBackgroundRefresh())
         return;
 
