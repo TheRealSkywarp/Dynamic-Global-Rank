@@ -73,9 +73,6 @@ class $modify(MyMenuLayer, MenuLayer) {
         if (!MenuLayer::init())
             return false;
 
-        // Obtain a silent, fresh baseline as soon as the main menu is available.
-        // This fixes the first rated completion after launch having no old rank
-        // to compare against (especially after changing the mod ID / fresh install).
         RankManager::get().requestInitialRank();
         return true;
     }
